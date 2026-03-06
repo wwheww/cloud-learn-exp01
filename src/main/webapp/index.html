@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>智学云 - 首页</title>
+</head>
+<body>
+    <h1>欢迎来到智学云</h1>
+    
+    <h3>1. 查看课程列表 (GET)</h3>
+    <a href="courses">点击查看所有课程</a>
+
+    <hr/>
+
+    <h3>2. 添加新课程 (POST)</h3>
+    <form action="courses" method="post">
+        <p>
+            课程名称: <input type="text" name="name" required>
+        </p>
+        <p>
+            课程价格: <input type="number" name="price" step="0.01" required>
+        </p>
+        <p>
+            课程时长: <input type="number" name="duration" required> 小时
+        </p>
+        <p>
+            <input type="submit" value="添加课程">
+        </p>
+    </form>
+</body>
+</html>
