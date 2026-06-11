@@ -1,54 +1,82 @@
 package cs.sbs.web.http;
 
-import java.nio.charset.StandardCharsets;
+import java.io.*;
+import java.net.Socket;
 
-/**
- * HTTP响应构造工具类
- */
-public class HttpResponse {
-    
-    public static String ok(String body) {
-        return buildResponse(200, "OK", "text/html; charset=UTF-8", body);
+public class RequestHandler implements Runnable {
+
+    private final Socket clientSocket;
+
+    public RequestHandler(Socket socket) {
+        this.clientSocket = socket;
     }
-    
-    public static String notFound() {
-        String body = """
-            <!DOCTYPE html>
-            <html>
-            <head><title>404 - 页面未找到</title></head>
-            <body>
-                <h1>404 - 页面未找到</h1>
-                <p>您访问的页面不存在。</p>
-                <a href="/">返回首页</a>
-            </body>
-            </html>
-            """;
-        return buildResponse(404, "Not Found", "text/html; charset=UTF-8", body);
-    }
-    
-    public static String methodNotAllowed() {
-        String body = """
-            <!DOCTYPE html>
-            <html>
-            <head><title>405 - 方法不允许</title></head>
-            <body>
-                <h1>405 - 方法不允许</h1>
-                <p>仅支持GET请求。</p>
-            </body>
-            </html>
-            """;
-        return buildResponse(405, "Method Not Allowed", "text/html; charset=UTF-8", body);
-    }
-    
-    private static String buildResponse(int statusCode, String statusText, 
-                                       String contentType, String body) {
-        StringBuilder response = new StringBuilder();
-        response.append("HTTP/1.1 ").append(statusCode).append(" ").append(statusText).append("\r\n");
-        response.append("Content-Type: ").append(contentType).append("\r\n");
-        response.append("Content-Length: ").append(body.getBytes(StandardCharsets.UTF_8).length).append("\r\n");
-        response.append("Connection: close\r\n");
-        response.append("\r\n");
-        response.append(body);
-        return response.toString();
+
+    @Override
+    public void run() {
+        try (
+            // 从 Socket 获取输入输出流
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
+        ) {
+            // 1. 读取请求行 (e.g., "GET /home HTTP/1.1")
+            String requestLine = in.readLine();
+            if (requestLine == null || requestLine.isEmpty()) {
+                return;
+            }
+
+            System.out.println("收到请求: " + requestLine);
+            String[] parts = requestLine.split(" ");
+            String path = parts.length > 1 ? parts[1] : "/";
+
+            // 2. 简单的路由与响应生成
+            String response;
+            if ("/".equals(path) || "/home".equals(path)) {
+                String body = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>智学云 - 首页</title></head>
+                    <body>
+                        <h1>欢迎来到智学云在线学习平台</h1>
+                        <p><a href="/courses">查看课程列表</a></p>
+                    </body>
+                    </html>
+                """;
+                response = HttpResponse.ok(body);
+            } else if ("/courses".equals(path)) {
+                String body = """
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>智学云 - 课程列表</title></head>
+                    <body>
+                        <h1>课程列表（原生HTTP）</h1>
+                        <ul>
+                            <li>Java 基础</li>
+                            <li>Web 开发</li>
+                            <li>Spring Boot 实战</li>
+                        </ul>
+                        <p><a href="/home">返回首页</a></p>
+                    </body>
+                    </html>
+                """;
+                response = HttpResponse.ok(body);
+            } else {
+                response = HttpResponse.notFound();
+            }
+
+            // 3. 将响应写入输出流
+            out.println(response);
+
+        } catch (IOException e) {
+            System.err.println("处理请求时发生错误: " + e.getMessage());
+        } finally {
+            // 4. 确保连接最终被关闭
+            try {
+                if (clientSocket != null && !clientSocket.isClosed()) {
+                    clientSocket.close();
+                }
+            } catch (IOException e) {
+                System.err.println("关闭Socket时出错: " + e.getMessage());
+            }
+        }
     }
 }
